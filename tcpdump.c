@@ -661,6 +661,7 @@ show_devices_and_exit (void)
 #define OPTION_VERSION		128
 #define OPTION_TSTAMP_PRECISION	129
 #define OPTION_IMMEDIATE_MODE	130
+#define OPTION_LIMIT_TIME	132
 
 static const struct option longopts[] = {
 #if defined(HAVE_PCAP_CREATE) || defined(WIN32)
@@ -695,6 +696,7 @@ static const struct option longopts[] = {
 #ifdef HAVE_PCAP_SET_IMMEDIATE_MODE
 	{ "immediate-mode", no_argument, NULL, OPTION_IMMEDIATE_MODE },
 #endif
+	{ "limit-time", required_argument, NULL, OPTION_LIMIT_TIME },
 #if defined(HAVE_PCAP_DEBUG) || defined(HAVE_YYDEBUG)
 	{ "debug-filter-parser", no_argument, NULL, 'Y' },
 #endif
@@ -1424,6 +1426,13 @@ main(int argc, char **argv)
 			break;
 #endif
 
+
+		case OPTION_LIMIT_TIME:
+			gndo->ndo_timed_stop = atoi(optarg);
+			if (gndo->ndo_timed_stop < 0)
+				error("invalid number of seconds %s", optarg);
+			break;
+
 		default:
 			print_usage();
 			exit(1);
@@ -1643,6 +1652,12 @@ main(int argc, char **argv)
 			              device, pcap_statustostr(status));
 		}
 #endif
+
+		if(gndo->ndo_timed_stop) {
+			signal (SIGALRM, cleanup);
+			alarm (gndo->ndo_timed_stop);
+		}
+
 		status = pcap_activate(pd);
 		if (status < 0) {
 			/*
@@ -2625,7 +2640,9 @@ print_usage(void)
 	(void)fprintf(stderr,
 "\t\t[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]\n");
 	(void)fprintf(stderr,
-"\t\t[ -i interface ]" j_FLAG_USAGE " [ -M secret ] [ --number ]\n");
+"\t\t[ -i interface ]" j_FLAG_USAGE " [ -M secret ]");
+	(void)fprintf(stderr,
+" --limit-time seconds] [ --number ]\n");
 #ifdef HAVE_PCAP_SETDIRECTION
 	(void)fprintf(stderr,
 "\t\t[ -Q in|out|inout ]\n");
